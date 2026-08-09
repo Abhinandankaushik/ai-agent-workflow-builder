@@ -1,0 +1,16 @@
+{
+  "name": "ai-workflow-builder",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "setup": "node scripts/setup.mjs",
+    "setup:metadata": "node scripts/setup.mjs --metadata",
+    "seed": "node scripts/seed.mjs",
+    "dev": "npm --prefix web run dev",
+    "build": "npm --prefix web run build"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
