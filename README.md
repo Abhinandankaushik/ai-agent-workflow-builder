@@ -1,5 +1,8 @@
 # AI Agent Workflow Builder
 
+**Live app:** https://ai-agent-workflow-builder-zeta.vercel.app
+**Demo logins:** `owner.a@demo.dev` · `editor.a@demo.dev` · `viewer.a@demo.dev` · `owner.b@demo.dev` — password `Password123!`
+
 A mini n8n for chaining AI agent steps, built on **nhost (Postgres + Hasura + Auth)** with a
 **Next.js** frontend that also hosts the Hasura Action / Event Trigger / Cron handlers.
 
@@ -137,6 +140,31 @@ Password for all: `Password123!`
 5. Add the Vercel URL to **nhost → Settings → Auth → Allowed redirect URLs**.
 
 ---
+
+## Verification scripts
+
+Three scripts prove the system rather than describe it. All of them sign in as the seeded users
+over the public API — no admin secret is used for any assertion.
+
+```bash
+npm run verify   # 16 permission assertions: cross-org isolation, ID guessing, both layers
+npm run e2e      # the entire Final Task scenario, end to end, against the deployed handlers
+npm run smoke    # replays Hasura's Action payloads directly at a handler (works without a tunnel)
+```
+
+`npm run e2e` output on the deployed stack:
+
+```
+[1] run started through the Hasura Action → paused at the approval gate
+[2] Org B owner cannot read the run / its step_runs / approve it / trigger it
+[3] Org A viewer cannot trigger or approve
+[4] Org A editor approves → run completes
+[5] db_write artifact written, notify delivered to Slack
+[6] webhook starts a run with no JWT; POSITIVE sentiment skips the http_request step
+[7] a watched_events insert auto-starts a run via the Event Trigger
+[8] org_usage: quota 2/50, 4 runs, avg 9.77s
+ALL CHECKS PASSED
+```
 
 ## The Final Task walkthrough
 

@@ -8,7 +8,7 @@ export function loadEnv() {
   for (const file of ['.env', '.env.local']) {
     const p = path.join(ROOT, file);
     if (!fs.existsSync(p)) continue;
-    for (const raw of fs.readFileSync(p, 'utf8').split(/\r?\n/)) {
+    for (const raw of fs.readFileSync(p, 'utf8').replace(/^﻿/, '').split(/\r?\n/)) {
       const line = raw.trim();
       if (!line || line.startsWith('#')) continue;
       const idx = line.indexOf('=');

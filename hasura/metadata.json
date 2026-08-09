@@ -3247,7 +3247,7 @@
                 "interval_sec": 10,
                 "timeout_sec": 60
               },
-              "webhook": "http://localhost:3000/api/events/notify",
+              "webhook": "https://ai-agent-workflow-builder-zeta.vercel.app/api/events/notify",
               "headers": [
                 {
                   "name": "x-action-secret",
@@ -3416,7 +3416,7 @@
                 "interval_sec": 10,
                 "timeout_sec": 60
               },
-              "webhook": "http://localhost:3000/api/events/watched-row",
+              "webhook": "https://ai-agent-workflow-builder-zeta.vercel.app/api/events/watched-row",
               "headers": [
                 {
                   "name": "x-action-secret",
@@ -3582,7 +3582,7 @@
           }
         ],
         "timeout": 120,
-        "handler": "http://localhost:3000/api/actions/trigger-workflow-run",
+        "handler": "https://ai-agent-workflow-builder-zeta.vercel.app/api/actions/trigger-workflow-run",
         "output_type": "TriggerWorkflowRunOutput!",
         "arguments": [
           {
@@ -3618,7 +3618,7 @@
           }
         ],
         "timeout": 120,
-        "handler": "http://localhost:3000/api/actions/approve-step",
+        "handler": "https://ai-agent-workflow-builder-zeta.vercel.app/api/actions/approve-step",
         "output_type": "ApproveStepOutput!",
         "arguments": [
           {
@@ -3658,7 +3658,7 @@
           }
         ],
         "timeout": 120,
-        "handler": "http://localhost:3000/api/actions/invite-member",
+        "handler": "https://ai-agent-workflow-builder-zeta.vercel.app/api/actions/invite-member",
         "output_type": "InviteMemberOutput!",
         "arguments": [
           {
@@ -3695,7 +3695,7 @@
           }
         ],
         "timeout": 120,
-        "handler": "http://localhost:3000/api/actions/webhook-trigger",
+        "handler": "https://ai-agent-workflow-builder-zeta.vercel.app/api/actions/webhook-trigger",
         "output_type": "TriggerWorkflowRunOutput!",
         "arguments": [
           {
@@ -3797,7 +3797,7 @@
   "cron_triggers": [
     {
       "name": "workflow_scheduler",
-      "webhook": "http://localhost:3000/api/cron/scheduler",
+      "webhook": "https://ai-agent-workflow-builder-zeta.vercel.app/api/cron/scheduler",
       "schedule": "* * * * *",
       "include_in_metadata": true,
       "payload": {},

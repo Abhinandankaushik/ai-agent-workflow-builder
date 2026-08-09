@@ -7,6 +7,9 @@
     "setup": "node scripts/setup.mjs",
     "setup:metadata": "node scripts/setup.mjs --metadata",
     "seed": "node scripts/seed.mjs",
+    "verify": "node scripts/verify.mjs",
+    "e2e": "node scripts/e2e.mjs",
+    "smoke": "node scripts/smoke.mjs",
     "dev": "npm --prefix web run dev",
     "build": "npm --prefix web run build"
   },
