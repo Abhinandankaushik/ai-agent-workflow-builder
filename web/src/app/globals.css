@@ -59,10 +59,14 @@
 
   --sidebar-w: 248px;
   --ease: cubic-bezier(0.22, 1, 0.36, 1);
+
+  /* keeps scrollbars, checkboxes and caret colours in step with the palette */
+  color-scheme: light;
 }
 
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
+    color-scheme: dark;
     --bg: #08080c;
     --bg-grid: rgba(255, 255, 255, 0.028);
     --surface: #0e0e15;
@@ -108,6 +112,7 @@
 }
 
 :root[data-theme="dark"] {
+  color-scheme: dark;
   --bg: #08080c;
   --bg-grid: rgba(255, 255, 255, 0.028);
   --surface: #0e0e15;
@@ -698,10 +703,10 @@ hr {
   margin-top: 5px;
 }
 
-input[type="text"],
-input[type="email"],
-input[type="password"],
-input[type="number"],
+/* Element selectors, not [type="..."]: an <input> with no type attribute is
+   still a text field, and an attribute selector would skip it. Specificity is
+   kept at (0,0,1) so .inline-input and .step-title can still override it. */
+input,
 select,
 textarea {
   font: inherit;
@@ -712,6 +717,34 @@ textarea {
   border-radius: var(--r-sm);
   padding: 8px 11px;
   transition: border-color 0.14s, box-shadow 0.14s, background 0.14s;
+}
+
+input[type="checkbox"],
+input[type="radio"] {
+  width: auto;
+  padding: 0;
+  background: none;
+  border: 0;
+  accent-color: var(--accent);
+}
+
+/* Chrome paints autofilled fields with an opaque light background that ignores
+   the theme; the inset shadow is the only way to override it. */
+input:-webkit-autofill,
+input:-webkit-autofill:hover,
+input:-webkit-autofill:focus,
+textarea:-webkit-autofill,
+select:-webkit-autofill {
+  -webkit-text-fill-color: var(--text);
+  -webkit-box-shadow: 0 0 0 1000px var(--surface-2) inset;
+  box-shadow: 0 0 0 1000px var(--surface-2) inset;
+  caret-color: var(--text);
+  border-radius: var(--r-sm);
+  transition: background-color 9999s ease-out;
+}
+input:-webkit-autofill:focus {
+  -webkit-box-shadow: 0 0 0 1000px var(--surface) inset, 0 0 0 3px var(--accent-soft);
+  box-shadow: 0 0 0 1000px var(--surface) inset, 0 0 0 3px var(--accent-soft);
 }
 input::placeholder,
 textarea::placeholder {
@@ -731,15 +764,6 @@ textarea:disabled {
   opacity: 0.6;
   cursor: not-allowed;
 }
-select {
-  appearance: none;
-  padding-right: 30px;
-  background-image: linear-gradient(45deg, transparent 50%, currentColor 50%),
-    linear-gradient(135deg, currentColor 50%, transparent 50%);
-  background-position: calc(100% - 15px) 15px, calc(100% - 10px) 15px;
-  background-size: 5px 5px, 5px 5px;
-  background-repeat: no-repeat;
-}
 textarea {
   min-height: 84px;
   resize: vertical;
@@ -754,6 +778,8 @@ textarea.prose {
 .inline-input {
   border: 1px solid transparent;
   background: transparent;
+  width: 100%;
+  max-width: 560px;
   padding: 3px 7px;
   margin-left: -7px;
   font-size: 21px;
