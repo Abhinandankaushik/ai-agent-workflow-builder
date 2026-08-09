@@ -149,6 +149,35 @@ export const WORKFLOW_RUNS = gql`
   }
 `;
 
+/** Org-wide run feed. A subscription so webhook / cron / DB-event runs appear unprompted. */
+export const ORG_RUNS_LIVE = gql`
+  subscription OrgRunsLive($orgId: uuid!) {
+    workflow_runs(where: { org_id: { _eq: $orgId } }, order_by: { created_at: desc }, limit: 40) {
+      id
+      status
+      trigger_type
+      created_at
+      started_at
+      finished_at
+      error
+      workflow {
+        id
+        name
+      }
+      initiator {
+        id
+        displayName
+        email
+      }
+      step_runs(order_by: { position: asc }) {
+        id
+        status
+        type
+      }
+    }
+  }
+`;
+
 /** Required subscription: live per-step progress for one run, including the paused state. */
 export const STEP_RUNS_LIVE = gql`
   subscription StepRunsLive($runId: uuid!) {

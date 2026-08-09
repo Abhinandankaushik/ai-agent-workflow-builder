@@ -5,7 +5,27 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import { AppShell } from '@/components/AppShell';
-import { ErrorText, Json, Meter, StatusBadge, relTime } from '@/components/ui';
+import {
+  ChevronRight,
+  Database,
+  Flow,
+  Gauge,
+  Play,
+  Plus,
+  Sparkles,
+} from '@/components/icons';
+import {
+  Alert,
+  Empty,
+  ErrorText,
+  Meter,
+  Skeleton,
+  Stat,
+  StatusBadge,
+  StepGlyph,
+  TriggerPill,
+  relTime,
+} from '@/components/ui';
 import { useRole } from '@/lib/providers';
 import {
   CREATE_WORKFLOW,
@@ -42,65 +62,125 @@ function Dashboard() {
   const { data, loading, error, refetch } = useQuery<{ workflows: Workflow[] }>(ORG_WORKFLOWS, {
     variables: { orgId },
     skip: !orgId,
-    pollInterval: 6000,
+    pollInterval: 8000,
   });
+  const { data: usageData } = useQuery(ORG_USAGE, { variables: { orgId }, skip: !orgId, pollInterval: 6000 });
+  const usage = usageData?.org_usage?.[0];
+
+  const [composing, setComposing] = useState(false);
 
   return (
     <>
-      <div className="row" style={{ justifyContent: 'space-between', marginBottom: 14 }}>
-        <div>
+      <div className="page-head">
+        <div style={{ flex: 1, minWidth: 0 }}>
           <h1>Workflows</h1>
-          <p className="muted small" style={{ margin: 0 }}>
-            Everything on this page is scoped to your organization by Hasura row permissions.
+          <p className="muted small">
+            Every workflow, run and quota figure on this page is scoped to your organization by Hasura
+            row permissions — not by this UI.
           </p>
         </div>
+        {canEdit && (
+          <button className="btn primary" onClick={() => setComposing((v) => !v)}>
+            <Plus size={15} />
+            New workflow
+          </button>
+        )}
       </div>
 
-      <div className="grid two">
-        <div>
+      <div className="grid cols-4" style={{ marginBottom: 16 }}>
+        <Stat
+          label="Runs this period"
+          value={usage ? usage.runs_this_period : <Skeleton h={24} w={44} />}
+          sub={`${usage?.paused_runs ?? 0} awaiting approval`}
+        />
+        <Stat
+          label="Completed"
+          value={usage ? usage.completed_runs : <Skeleton h={24} w={44} />}
+          sub={`${usage?.failed_runs ?? 0} failed`}
+        />
+        <Stat
+          label="Avg duration"
+          value={usage ? `${usage.avg_run_seconds}s` : <Skeleton h={24} w={60} />}
+          sub="across finished runs"
+        />
+        <Stat
+          label="LLM calls"
+          value={usage ? usage.llm_calls_this_period : <Skeleton h={24} w={44} />}
+          sub="this quota period"
+        />
+      </div>
+
+      <div className="grid main-rail">
+        <div className="stack-16">
+          {composing && canEdit && <NewWorkflowCard onDone={() => { setComposing(false); refetch(); }} />}
+
           {error && <ErrorText error={error} />}
-          {loading && !data && <div className="panel muted">Loading workflows…</div>}
+
+          {loading && !data && (
+            <div className="stack-16">
+              {[0, 1].map((i) => (
+                <div className="card pad" key={i}>
+                  <Skeleton h={16} w={190} />
+                  <div style={{ height: 10 }} />
+                  <Skeleton h={11} w="70%" />
+                  <div style={{ height: 18 }} />
+                  <Skeleton h={30} />
+                </div>
+              ))}
+            </div>
+          )}
 
           {data?.workflows.length === 0 && (
-            <div className="panel muted">
-              No workflows yet{canEdit ? ' — create one on the right.' : '.'}
+            <div className="card">
+              <Empty
+                icon={<Flow size={20} />}
+                title="No workflows yet"
+                action={
+                  canEdit ? (
+                    <button className="btn primary" onClick={() => setComposing(true)}>
+                      <Plus size={15} />
+                      Create your first workflow
+                    </button>
+                  ) : undefined
+                }
+              >
+                {canEdit
+                  ? 'Chain an LLM call, a branch and an approval gate, then start it four different ways.'
+                  : 'Nothing has been created in this organization yet.'}
+              </Empty>
             </div>
           )}
 
-          <div className="grid">
-            {data?.workflows.map((wf) => (
-              <WorkflowCard key={wf.id} workflow={wf} onRan={() => refetch()} />
-            ))}
-          </div>
+          {data?.workflows.map((wf, i) => (
+            <WorkflowCard key={wf.id} workflow={wf} index={i} onRan={() => refetch()} />
+          ))}
         </div>
 
-        <div>
-          <UsagePanel />
-          {canEdit && <NewWorkflowPanel onCreated={() => refetch()} />}
-          {canEdit && <DatabaseEventPanel />}
-          {!canEdit && (
-            <div className="panel">
-              <h2>Viewer access</h2>
-              <p className="muted small" style={{ marginBottom: 0 }}>
-                You can read this org&apos;s workflows and run history. Starting a run is blocked at
-                the Hasura Action permission, not just hidden in this UI.
-              </p>
-            </div>
-          )}
+        <div className="stack-16">
+          <QuotaCard usage={usage} />
+          {canEdit ? <DatabaseEventCard /> : <ViewerCard />}
         </div>
       </div>
     </>
   );
 }
 
-// ------------------------------------------------------------- workflow card
+/* --------------------------------------------------------------- workflow */
 
-function WorkflowCard({ workflow, onRan }: { workflow: Workflow; onRan: () => void }) {
+function WorkflowCard({
+  workflow,
+  index,
+  onRan,
+}: {
+  workflow: Workflow;
+  index: number;
+  onRan: () => void;
+}) {
   const router = useRouter();
   const { role } = useRole();
   const canRun = role === 'owner' || role === 'editor';
-  const [message, setMessage] = useState('This app keeps crashing and I am furious about it.');
-  const [showRun, setShowRun] = useState(false);
+  const [open, setOpen] = useState(false);
+  const [message, setMessage] = useState('The app keeps crashing and I am furious about it.');
   const [trigger, { loading, error }] = useMutation(TRIGGER_WORKFLOW_RUN);
 
   const latest = workflow.runs[0];
@@ -113,195 +193,275 @@ function WorkflowCard({ workflow, onRan }: { workflow: Workflow; onRan: () => vo
   }
 
   return (
-    <div className="panel">
-      <div className="row" style={{ justifyContent: 'space-between' }}>
-        <div>
-          <h2 style={{ marginBottom: 2 }}>
-            <Link href={`/workflows/${workflow.id}`}>{workflow.name}</Link>
-          </h2>
-          <div className="muted small">{workflow.description || 'No description'}</div>
+    <article
+      className="card hover rise"
+      style={{ animationDelay: `${Math.min(index, 6) * 45}ms` }}
+    >
+      <div className="card-body" style={{ paddingBottom: 14 }}>
+        <div className="row between" style={{ alignItems: 'flex-start', gap: 12 }}>
+          <div style={{ minWidth: 0 }}>
+            <Link href={`/workflows/${workflow.id}`} className="row" style={{ gap: 7 }}>
+              <h2 className="truncate">{workflow.name}</h2>
+              <ChevronRight size={14} className="subtle" />
+            </Link>
+            <p className="muted small" style={{ marginTop: 3 }}>
+              {workflow.description || 'No description'}
+            </p>
+          </div>
+          <div className="row" style={{ gap: 6 }}>
+            {!workflow.is_active && <span className="badge">paused</span>}
+            <StatusBadge status={workflow.latest_run_status} />
+          </div>
         </div>
-        <StatusBadge status={workflow.latest_run_status} />
+
+        <div className="row wrap" style={{ gap: 5, marginTop: 14 }}>
+          {workflow.steps.map((s, i) => (
+            <span key={s.id} className="row" style={{ gap: 5 }}>
+              {i > 0 && <ChevronRight size={12} className="subtle" style={{ opacity: 0.55 }} />}
+              <span
+                className="row"
+                title={`${s.name} · ${s.type}`}
+                style={{
+                  gap: 5,
+                  padding: '3px 8px 3px 6px',
+                  borderRadius: 999,
+                  border: '1px solid var(--border)',
+                  background: 'var(--surface-2)',
+                  fontSize: 11.5,
+                  color: 'var(--text-muted)',
+                }}
+              >
+                <StepGlyph type={s.type} size={13} />
+                <span className="truncate" style={{ maxWidth: 110 }}>
+                  {s.name}
+                </span>
+              </span>
+            </span>
+          ))}
+          {workflow.steps.length === 0 && <span className="small subtle">No steps configured</span>}
+        </div>
       </div>
 
-      <div className="row small muted" style={{ marginTop: 10 }}>
-        <span>{workflow.steps.length} steps</span>
-        <span>·</span>
-        <span>{workflow.run_count} runs</span>
-        {latest && (
+      <div
+        className="row between"
+        style={{ padding: '10px 18px', borderTop: '1px solid var(--border)', gap: 10, flexWrap: 'wrap' }}
+      >
+        <div className="row wrap" style={{ gap: 5 }}>
+          {workflow.triggers.map((t) => (
+            <TriggerPill key={t.id} type={t.type} muted={!t.is_active} />
+          ))}
+          {workflow.triggers.length === 0 && <span className="tiny subtle">no triggers</span>}
+        </div>
+        <div className="row" style={{ gap: 8 }}>
+          <span className="tiny subtle nowrap">
+            {workflow.run_count} run{workflow.run_count === 1 ? '' : 's'}
+            {latest ? ` · ${relTime(latest.created_at)}` : ''}
+          </span>
+          {latest && (
+            <Link className="btn sm" href={`/runs/${latest.id}`}>
+              Latest
+            </Link>
+          )}
+          <Link className="btn sm" href={`/workflows/${workflow.id}`}>
+            Open
+          </Link>
+          {/* Hidden for viewers here, and independently rejected by the Action's
+              permission if a viewer ever calls the mutation directly. */}
+          {canRun && (
+            <button className="btn primary sm" onClick={() => setOpen((v) => !v)}>
+              <Play size={12} />
+              Run
+            </button>
+          )}
+        </div>
+      </div>
+
+      {open && canRun && (
+        <div style={{ padding: 18, borderTop: '1px solid var(--border)', animation: 'reveal .2s var(--ease)' }}>
+          <div className="field">
+            <label>Run input</label>
+            <textarea value={message} onChange={(e) => setMessage(e.target.value)} rows={3} />
+            <div className="hint">
+              Reachable from any step as <span className="mono">{'{{run.input.message}}'}</span>
+            </div>
+          </div>
+          <ErrorText error={error} />
+          <div className="row" style={{ marginTop: 12 }}>
+            <button className="btn primary" onClick={run} disabled={loading}>
+              <Play size={13} />
+              {loading ? 'Starting…' : 'Start run'}
+            </button>
+            <button className="btn ghost" onClick={() => setOpen(false)}>
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
+    </article>
+  );
+}
+
+/* ------------------------------------------------------------------- rail */
+
+function QuotaCard({ usage }: { usage: any }) {
+  return (
+    <section className="card">
+      <div className="card-head">
+        <Gauge size={15} className="subtle" />
+        <h2 style={{ flex: 1 }}>Usage this period</h2>
+      </div>
+      <div className="card-body">
+        {!usage ? (
+          <Skeleton h={70} />
+        ) : (
           <>
-            <span>·</span>
-            <span>
-              last {latest.trigger_type} run {relTime(latest.created_at)}
-            </span>
+            <div className="row between" style={{ marginBottom: 7 }}>
+              <span className="small muted">Runs consumed</span>
+              <span className="small tnum strong">
+                {usage.quota_used} / {usage.quota_limit}
+              </span>
+            </div>
+            <Meter used={usage.quota_used} limit={usage.quota_limit} />
+            <div className="tiny subtle" style={{ marginTop: 7 }}>
+              Checked before a run is created and consumed atomically on completion.
+            </div>
+
+            <div className="grid cols-2" style={{ gap: 10, marginTop: 16 }}>
+              {[
+                ['Started', usage.runs_this_period],
+                ['Completed', usage.completed_runs],
+                ['Paused', usage.paused_runs],
+                ['Failed', usage.failed_runs],
+              ].map(([k, v]) => (
+                <div key={k as string}>
+                  <div className="tiny subtle">{k}</div>
+                  <div className="strong tnum" style={{ fontSize: 15 }}>
+                    {v as number}
+                  </div>
+                </div>
+              ))}
+            </div>
+            <div className="tiny subtle" style={{ marginTop: 14 }}>
+              Source: the <span className="mono">org_usage</span> Postgres view.
+            </div>
           </>
         )}
       </div>
-
-      <div className="row small" style={{ marginTop: 8 }}>
-        {workflow.steps.map((s) => (
-          <span key={s.id} className="badge">
-            {s.type}
-          </span>
-        ))}
-      </div>
-
-      <div className="row small" style={{ marginTop: 8 }}>
-        <span className="muted">triggers:</span>
-        {workflow.triggers.length === 0 && <span className="muted">none</span>}
-        {workflow.triggers.map((t) => (
-          <span key={t.id} className={`badge ${t.is_active ? 'run' : ''}`}>
-            {t.type}
-          </span>
-        ))}
-      </div>
-
-      <div className="row" style={{ marginTop: 12 }}>
-        <Link className="btn" href={`/workflows/${workflow.id}`}>
-          Open builder
-        </Link>
-        {latest && (
-          <Link className="btn" href={`/runs/${latest.id}`}>
-            Latest run
-          </Link>
-        )}
-        {/* Hidden for viewers here, and independently rejected by the Action's
-            permission if a viewer ever calls the mutation directly. */}
-        {canRun && (
-          <button className="primary" onClick={() => setShowRun((v) => !v)}>
-            Run
-          </button>
-        )}
-      </div>
-
-      {showRun && canRun && (
-        <div style={{ marginTop: 10 }}>
-          <div className="field">
-            <label>Run input — available to steps as {'{{run.input.message}}'}</label>
-            <textarea value={message} onChange={(e) => setMessage(e.target.value)} />
-          </div>
-          <ErrorText error={error} />
-          <button className="primary" onClick={run} disabled={loading}>
-            {loading ? 'Starting…' : 'Start run'}
-          </button>
-        </div>
-      )}
-    </div>
+    </section>
   );
 }
 
-// ---------------------------------------------------------------- side panels
-
-function UsagePanel() {
-  const { orgId } = useRole();
-  const { data } = useQuery(ORG_USAGE, { variables: { orgId }, skip: !orgId, pollInterval: 6000 });
-  const usage = data?.org_usage?.[0];
-  if (!usage) return null;
-
+function ViewerCard() {
   return (
-    <div className="panel">
-      <h2>Usage this period</h2>
-      <p className="muted small" style={{ marginTop: 0 }}>
-        From the <span className="mono">org_usage</span> Postgres view.
+    <section className="card pad">
+      <h2>Viewer access</h2>
+      <p className="muted small" style={{ marginTop: 6 }}>
+        You can read this organization&apos;s workflows and run history. Starting a run and clearing an
+        approval gate are blocked at the Hasura Action permission and re-checked in the handler — not
+        merely hidden here.
       </p>
-      <div className="row small" style={{ justifyContent: 'space-between' }}>
-        <span className="muted">runs consumed</span>
-        <span>
-          {usage.quota_used} / {usage.quota_limit}
-        </span>
-      </div>
-      <Meter used={usage.quota_used} limit={usage.quota_limit} />
-      <dl className="kv" style={{ marginTop: 12 }}>
-        <dt>runs started</dt>
-        <dd>{usage.runs_this_period}</dd>
-        <dt>completed</dt>
-        <dd>{usage.completed_runs}</dd>
-        <dt>failed</dt>
-        <dd>{usage.failed_runs}</dd>
-        <dt>paused</dt>
-        <dd>{usage.paused_runs}</dd>
-        <dt>avg duration</dt>
-        <dd>{usage.avg_run_seconds}s</dd>
-        <dt>llm calls</dt>
-        <dd>{usage.llm_calls_this_period}</dd>
-      </dl>
-    </div>
+    </section>
   );
 }
 
-function NewWorkflowPanel({ onCreated }: { onCreated: () => void }) {
+function NewWorkflowCard({ onDone }: { onDone: () => void }) {
   const { orgId } = useRole();
+  const router = useRouter();
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [create, { loading, error }] = useMutation(CREATE_WORKFLOW);
-  const router = useRouter();
 
   return (
     <form
-      className="panel"
+      className="card pad rise"
       onSubmit={async (e) => {
         e.preventDefault();
         const res = await create({ variables: { orgId, name, description } });
-        setName('');
-        setDescription('');
-        onCreated();
+        onDone();
         const id = res.data?.insert_workflows_one?.id;
         if (id) router.push(`/workflows/${id}`);
       }}
     >
-      <h2>New workflow</h2>
-      <div className="field">
-        <label>Name</label>
-        <input required value={name} onChange={(e) => setName(e.target.value)} placeholder="Support triage" />
+      <div className="row" style={{ gap: 9, marginBottom: 14 }}>
+        <Sparkles size={16} style={{ color: 'var(--accent)' }} />
+        <h2 style={{ flex: 1 }}>New workflow</h2>
       </div>
-      <div className="field">
-        <label>Description</label>
-        <input value={description} onChange={(e) => setDescription(e.target.value)} />
+      <div className="grid cols-2" style={{ gap: 12 }}>
+        <div className="field" style={{ margin: 0 }}>
+          <label>Name</label>
+          <input required autoFocus value={name} onChange={(e) => setName(e.target.value)} placeholder="Support ticket triage" />
+        </div>
+        <div className="field" style={{ margin: 0 }}>
+          <label>Description</label>
+          <input value={description} onChange={(e) => setDescription(e.target.value)} placeholder="What does it do?" />
+        </div>
       </div>
       <ErrorText error={error} />
-      <button className="primary" disabled={loading}>
-        {loading ? 'Creating…' : 'Create workflow'}
-      </button>
+      <div className="row" style={{ marginTop: 14 }}>
+        <button className="btn primary" disabled={loading || !name}>
+          {loading ? 'Creating…' : 'Create & open builder'}
+        </button>
+        <button type="button" className="btn ghost" onClick={onDone}>
+          Cancel
+        </button>
+      </div>
     </form>
   );
 }
 
-function DatabaseEventPanel() {
+function DatabaseEventCard() {
   const { orgId } = useRole();
   const [payload, setPayload] = useState('{\n  "message": "Everything broke after the update!"\n}');
   const [insert, { loading, error, data }] = useMutation(INSERT_WATCHED_EVENT);
   const [parseError, setParseError] = useState<string | null>(null);
 
   return (
-    <div className="panel">
-      <h2>Fire a database event</h2>
-      <p className="muted small" style={{ marginTop: 0 }}>
-        Inserts into <span className="mono">watched_events</span>. A Hasura Event Trigger picks the
-        row up and starts every workflow in this org with a matching{' '}
-        <span className="mono">database_event</span> trigger — no button on a workflow involved.
-      </p>
-      <div className="field">
-        <label>Payload</label>
-        <textarea value={payload} onChange={(e) => setPayload(e.target.value)} />
+    <section className="card">
+      <div className="card-head">
+        <Database size={15} className="subtle" />
+        <h2 style={{ flex: 1 }}>Fire a database event</h2>
       </div>
-      {parseError && <ErrorText error={parseError} />}
-      <ErrorText error={error} />
-      {data && <div className="alert ok small">Event inserted — watch the workflow&apos;s runs.</div>}
-      <button
-        disabled={loading}
-        onClick={async () => {
-          setParseError(null);
-          try {
-            const parsed = JSON.parse(payload);
-            await insert({ variables: { orgId, source: 'support_inbox', payload: parsed } });
-          } catch (err) {
-            setParseError(err instanceof Error ? err.message : String(err));
-          }
-        }}
-      >
-        {loading ? 'Inserting…' : 'Insert watched_events row'}
-      </button>
-      {data && <Json value={data} />}
-    </div>
+      <div className="card-body">
+        <p className="muted small" style={{ marginBottom: 12 }}>
+          Inserts a row into <span className="mono">watched_events</span>. A Hasura Event Trigger picks
+          it up and starts every workflow in this org with a matching{' '}
+          <span className="mono">database_event</span> trigger — no button on a workflow involved.
+        </p>
+        <div className="field" style={{ margin: 0 }}>
+          <label>Payload</label>
+          <textarea value={payload} onChange={(e) => setPayload(e.target.value)} rows={4} />
+        </div>
+        {parseError && <ErrorText error={parseError} />}
+        <ErrorText error={error} />
+        {data && (
+          <div style={{ marginTop: 10 }}>
+            <Alert tone="ok">
+              Event inserted — the new run will show up in{' '}
+              <Link href="/runs" style={{ color: 'inherit', textDecoration: 'underline' }}>
+                Runs
+              </Link>{' '}
+              on its own.
+            </Alert>
+          </div>
+        )}
+        <button
+          className="btn block"
+          style={{ marginTop: 12 }}
+          disabled={loading}
+          onClick={async () => {
+            setParseError(null);
+            try {
+              const parsed = JSON.parse(payload);
+              await insert({ variables: { orgId, source: 'support_inbox', payload: parsed } });
+            } catch (err) {
+              setParseError(err instanceof Error ? err.message : String(err));
+            }
+          }}
+        >
+          <Database size={14} />
+          {loading ? 'Inserting…' : 'Insert watched_events row'}
+        </button>
+      </div>
+    </section>
   );
 }
