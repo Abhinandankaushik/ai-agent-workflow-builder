@@ -4,7 +4,8 @@ import { useMutation, useQuery } from '@apollo/client';
 import Link from 'next/link';
 import { useState } from 'react';
 import { AppShell } from '@/components/AppShell';
-import { Database, Lock, ShieldCheck, Sparkles, Trash, Users, Webhook } from '@/components/icons';
+import { Lock, ShieldCheck, Trash, Users } from '@/components/icons';
+import { Select } from '@/components/Select';
 import { Alert, Avatar, Empty, ErrorText, RoleBadge, Skeleton } from '@/components/ui';
 import { useAuth, useRole } from '@/lib/providers';
 import { INVITE_MEMBER, ORG_MEMBERS, REMOVE_MEMBER, UPDATE_MEMBER_ROLE } from '@/lib/queries';
@@ -17,21 +18,24 @@ export default function MembersPage() {
   );
 }
 
+const ROLE_OPTIONS = [
+  { value: 'owner', label: 'owner', hint: 'Full control' },
+  { value: 'editor', label: 'editor', hint: 'Build and run' },
+  { value: 'viewer', label: 'viewer', hint: 'Read only' },
+];
+
 const ROLE_MATRIX = [
   {
     role: 'owner',
     line: 'Everything an editor can do, plus membership management, db_write and notify steps, webhook triggers, and reading webhook secrets.',
-    icons: [Database, Webhook],
   },
   {
     role: 'editor',
     line: 'Create and edit workflows, steps and non-privileged triggers. Start runs and clear approval gates.',
-    icons: [Sparkles],
   },
   {
     role: 'viewer',
     line: 'Read workflows and run history. Cannot start a run or approve — enforced by the Action permission, not the UI.',
-    icons: [Lock],
   },
 ];
 
@@ -126,17 +130,16 @@ function Members() {
                           </div>
                         </td>
                         <td>
-                          <select
+                          <Select
+                            size="sm"
+                            ariaLabel={`Role for ${m.user?.email}`}
                             value={m.role}
-                            onChange={async (e) => {
-                              await updateRole({ variables: { id: m.id, role: e.target.value } });
+                            options={ROLE_OPTIONS}
+                            onChange={async (role) => {
+                              await updateRole({ variables: { id: m.id, role } });
                               refetch();
                             }}
-                          >
-                            <option value="owner">owner</option>
-                            <option value="editor">editor</option>
-                            <option value="viewer">viewer</option>
-                          </select>
+                          />
                         </td>
                         <td>
                           <button
@@ -213,11 +216,7 @@ function Members() {
             </div>
             <div className="field">
               <label>Role</label>
-              <select value={newRole} onChange={(e) => setNewRole(e.target.value)}>
-                <option value="owner">owner</option>
-                <option value="editor">editor</option>
-                <option value="viewer">viewer</option>
-              </select>
+              <Select value={newRole} onChange={setNewRole} options={ROLE_OPTIONS} ariaLabel="Role" />
             </div>
             <ErrorText error={inviteError} />
             {inviteData && (

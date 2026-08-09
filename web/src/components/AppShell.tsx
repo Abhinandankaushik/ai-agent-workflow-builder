@@ -22,6 +22,7 @@ import {
   Users,
   Webhook,
 } from './icons';
+import { MenuItem, MenuLabel, Popover } from './Select';
 import { Alert, Avatar, ErrorText, Meter, RoleBadge, Skeleton } from './ui';
 
 type Membership = {
@@ -309,43 +310,60 @@ function OrgGate({ children }: { children: ReactNode }) {
 
 function OrgSwitcher({ memberships }: { memberships: Membership[] }) {
   const { orgId, role, setOrg } = useRole();
+  const [open, setOpen] = useState(false);
   const current = memberships.find((m) => m.org_id === orgId);
 
   return (
-    <div className="row" style={{ gap: 8, position: 'relative' }}>
-      <span className="avatar" style={{ borderRadius: 8 }}>
-        {(current?.organization.name ?? '?').slice(0, 2).toUpperCase()}
-      </span>
-      <label className="row" style={{ gap: 4, cursor: 'pointer', margin: 0 }}>
-        <span className="strong" style={{ fontSize: 13.5 }}>
-          {current?.organization.name}
-        </span>
-        <ChevronDown size={14} className="subtle" />
-        <select
-          value={orgId ?? ''}
-          onChange={(e) => {
-            const next = memberships.find((m) => m.org_id === e.target.value);
-            if (next) setOrg(next.org_id, next.role);
-          }}
-          style={{
-            position: 'absolute',
-            inset: 0,
-            opacity: 0,
-            cursor: 'pointer',
-            width: '100%',
-            height: '100%',
-          }}
-          aria-label="Switch organization"
+    <Popover
+      open={open}
+      onClose={() => setOpen(false)}
+      align="left"
+      minWidth={248}
+      trigger={
+        <button
+          type="button"
+          className={`org-trigger ${open ? 'open' : ''}`}
+          aria-haspopup="listbox"
+          aria-expanded={open}
+          onClick={() => setOpen((v) => !v)}
         >
-          {memberships.map((m) => (
-            <option key={m.org_id} value={m.org_id}>
-              {m.organization.name} · {m.role}
-            </option>
-          ))}
-        </select>
-      </label>
-      <RoleBadge role={role} />
-    </div>
+          <span className="avatar" style={{ borderRadius: 8 }}>
+            {(current?.organization.name ?? '?').slice(0, 2).toUpperCase()}
+          </span>
+          <span className="strong truncate" style={{ fontSize: 13.5, maxWidth: 180 }}>
+            {current?.organization.name}
+          </span>
+          <RoleBadge role={role} />
+          <ChevronDown
+            size={14}
+            className="subtle"
+            style={{ transform: open ? 'rotate(180deg)' : 'none', transition: 'transform .18s' }}
+          />
+        </button>
+      }
+    >
+      <MenuLabel>Switch organization</MenuLabel>
+      {memberships.map((m) => (
+        <MenuItem
+          key={m.org_id}
+          selected={m.org_id === orgId}
+          onSelect={() => {
+            setOrg(m.org_id, m.role);
+            setOpen(false);
+          }}
+        >
+          <span className="avatar" style={{ borderRadius: 7, width: 22, height: 22, fontSize: 9.5 }}>
+            {m.organization.name.slice(0, 2).toUpperCase()}
+          </span>
+          <span style={{ flex: 1, minWidth: 0 }}>
+            <span className="truncate" style={{ display: 'block' }}>
+              {m.organization.name}
+            </span>
+            <span className="tiny subtle">{m.role}</span>
+          </span>
+        </MenuItem>
+      ))}
+    </Popover>
   );
 }
 

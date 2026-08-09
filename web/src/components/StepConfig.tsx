@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { Plus, Trash } from './icons';
+import { Select as Menu } from './Select';
 
 /* ------------------------------------------------------------ primitives */
 
@@ -88,13 +89,13 @@ export function Select({
   return (
     <div className="field">
       <label>{label}</label>
-      <select value={value === undefined ? '' : String(value)} onChange={(e) => onChange(e.target.value)} disabled={disabled}>
-        {options.map(([v, l]) => (
-          <option key={v} value={v}>
-            {l}
-          </option>
-        ))}
-      </select>
+      <Menu
+        ariaLabel={label}
+        value={value === undefined ? '' : String(value)}
+        onChange={onChange}
+        disabled={disabled}
+        options={options.map(([v, l]) => ({ value: v, label: l }))}
+      />
       {hint && <div className="hint">{hint}</div>}
     </div>
   );
@@ -315,26 +316,25 @@ function Branch({
       <div className="label" style={{ marginBottom: 6 }}>
         {title}
       </div>
-      <select value={action} disabled={disabled} onChange={(e) => onChange({ action: e.target.value, position: value?.position ?? 0 })}>
-        {BRANCH_ACTIONS.map(([v, l]) => (
-          <option key={v} value={v}>
-            {l}
-          </option>
-        ))}
-      </select>
+      <Menu
+        ariaLabel={title}
+        value={action}
+        disabled={disabled}
+        onChange={(v) => onChange({ action: v, position: value?.position ?? 0 })}
+        options={BRANCH_ACTIONS.map(([v, l]) => ({ value: v, label: l }))}
+      />
       {action === 'skip_to' && (
         <div style={{ marginTop: 8 }}>
-          <select
+          <Menu
+            ariaLabel="Jump target"
             value={String(value?.position ?? 0)}
             disabled={disabled}
-            onChange={(e) => onChange({ action: 'skip_to', position: Number(e.target.value) })}
-          >
-            {Array.from({ length: Math.max(stepCount, 1) }, (_, i) => (
-              <option key={i} value={i}>
-                step {i}
-              </option>
-            ))}
-          </select>
+            onChange={(v) => onChange({ action: 'skip_to', position: Number(v) })}
+            options={Array.from({ length: Math.max(stepCount, 1) }, (_, i) => ({
+              value: String(i),
+              label: `step ${i}`,
+            }))}
+          />
         </div>
       )}
     </div>

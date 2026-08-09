@@ -19,8 +19,9 @@
   --border-strong: rgba(9, 9, 20, 0.16);
 
   --text: #14141c;
-  --text-muted: #5d5d70;
-  --text-subtle: #8a8a9c;
+  --text-muted: #52526a;
+  /* kept above 4.5:1 on --surface so 11-12px secondary text stays legible */
+  --text-subtle: #6b6b83;
 
   --accent: #5b52f0;
   --accent-hover: #4a41e0;
@@ -73,8 +74,8 @@
     --border-strong: rgba(255, 255, 255, 0.16);
 
     --text: #ececf2;
-    --text-muted: #9a9ab0;
-    --text-subtle: #6c6c82;
+    --text-muted: #a7a7bd;
+    --text-subtle: #8d8da6;
 
     --accent: #7b73ff;
     --accent-hover: #8d86ff;
@@ -118,8 +119,8 @@
   --border-strong: rgba(255, 255, 255, 0.16);
 
   --text: #ececf2;
-  --text-muted: #9a9ab0;
-  --text-subtle: #6c6c82;
+  --text-muted: #a7a7bd;
+  --text-subtle: #8d8da6;
 
   --accent: #7b73ff;
   --accent-hover: #8d86ff;
@@ -232,10 +233,10 @@ hr {
   color: var(--text-subtle);
 }
 .small {
-  font-size: 12px;
+  font-size: 12.5px;
 }
 .tiny {
-  font-size: 11px;
+  font-size: 11.5px;
 }
 .strong {
   font-weight: 600;
@@ -765,6 +766,138 @@ textarea.prose {
   border-color: var(--border);
 }
 
+/* Custom popover menus — native <select> popups are unstylable. */
+.pop {
+  position: relative;
+  display: inline-flex;
+}
+.menu {
+  position: absolute;
+  z-index: 60;
+  padding: 5px;
+  max-height: 292px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  box-shadow: var(--shadow-lg);
+  animation: reveal 0.14s var(--ease);
+}
+.menu.down {
+  top: calc(100% + 6px);
+}
+.menu.up {
+  bottom: calc(100% + 6px);
+}
+.menu.left {
+  left: 0;
+}
+.menu.right {
+  right: 0;
+}
+.menu-item {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  width: 100%;
+  padding: 7px 9px;
+  border: 0;
+  border-radius: var(--r-sm);
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  font-size: 13px;
+  text-align: left;
+  cursor: pointer;
+  transition: background 0.1s, color 0.1s;
+}
+.menu-item:hover:not(:disabled),
+.menu-item.focus:not(:disabled) {
+  background: var(--surface-hover);
+}
+.menu-item.selected {
+  color: var(--accent);
+  background: var(--accent-soft);
+}
+.menu-item:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+.menu-item .tick {
+  flex: none;
+  opacity: 0;
+}
+.menu-item.selected .tick {
+  opacity: 1;
+}
+.menu-label {
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--text-subtle);
+  padding: 7px 9px 4px;
+}
+.menu-sep {
+  height: 1px;
+  background: var(--border);
+  margin: 4px 2px;
+}
+
+.select-trigger {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  font: inherit;
+  color: var(--text);
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--r-sm);
+  padding: 8px 11px;
+  cursor: pointer;
+  transition: border-color 0.14s, box-shadow 0.14s, background 0.14s;
+}
+.select-trigger:hover:not(:disabled) {
+  border-color: var(--border-strong);
+}
+.select-trigger.open,
+.select-trigger:focus-visible {
+  outline: none;
+  background: var(--surface);
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-soft);
+}
+.select-trigger:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+.select-trigger.sm {
+  padding: 5px 9px;
+  font-size: 12.5px;
+  border-radius: var(--r-xs);
+}
+
+.org-trigger {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font: inherit;
+  color: var(--text);
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: var(--r-sm);
+  padding: 4px 8px 4px 5px;
+  cursor: pointer;
+  transition: background 0.14s, border-color 0.14s;
+}
+.org-trigger:hover,
+.org-trigger.open {
+  background: var(--surface-2);
+  border-color: var(--border);
+}
+
 .check {
   display: inline-flex;
   align-items: center;
@@ -817,7 +950,7 @@ textarea.prose {
   display: inline-flex;
   align-items: center;
   gap: 5px;
-  font-size: 11px;
+  font-size: 11.5px;
   font-weight: 570;
   letter-spacing: 0.01em;
   padding: 2.5px 8px;
@@ -990,6 +1123,14 @@ textarea.prose {
   font-weight: 560;
   font-size: 13.5px;
   min-width: 0;
+}
+input.step-title:hover:not(:disabled),
+input.step-title:focus {
+  background: var(--surface-2) !important;
+  border-color: var(--border) !important;
+}
+.hint {
+  line-height: 1.45;
 }
 .step-config {
   padding: 0 11px 12px;
